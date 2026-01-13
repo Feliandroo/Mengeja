@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Belajar Mengeja - Bahasa Indonesia</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #f0f8ff;
+      margin: 0;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      color: #0d47a1;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      margin: 10px 0 15px;
+      color: #1565c0;
+    }
+
+    .controls {
+      width: 95%;
+      max-width: 500px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 14px;
+      font-size: 1.3rem;
+      border: 2px solid #2196f3;
+      border-radius: 12px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #manualBtn { background: #2196f3; color: white; }
+    #randomBtn { background: #0d47a1; color: white; }
+    #autoPlayBtn { 
+      background: #ff6f00; 
+      color: white; 
+      margin-top: 5px; 
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .section {
+      width: 95%;
+      max-width: 500px;
+      margin: 15px 0;
+      padding: 15px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    }
+
+    .section-title {
+      font-size: 1.2rem;
+      margin-bottom: 12px;
+      color: #0288d1;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .items {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .item {
+      padding: 12px 18px;
+      font-size: 1.8rem;
+      font-weight: bold;
+      background: #bbdefb;
+      border: 2px solid #90caf9;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .item:hover {
+      background: #90caf9;
+      transform: scale(1.05);
+    }
+
+    .instructions {
+      text-align: center;
+      color: #546e7a;
+      margin-top: 10px;
+      font-size: 0.95rem;
+    }
+
+    /* Font styles - 100% offline */
+    .font-default { 
+      font-family: 'Arial', 'Helvetica', sans-serif; 
+    }
+    .font-bold { 
+      font-family: 'Arial Black', 'Impact', sans-serif; 
+      font-weight: 900; 
+    }
+    .font-handwriting { 
+      font-family: 'Comic Sans MS', cursive; 
+      font-size: 2.0rem; 
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🔊 Belajar Mengeja - Bahasa Indonesia</h1>
+
+  <div class="controls">
+    <input type="text" id="wordInput" placeholder="Ketik: mengaji, sungai, memperluas..." maxlength="40" />
+
+    <select id="categorySelect">
+      <option value="twoSyllable4">🔤 2 Suku Kata (4–6 Huruf) - DEFAULT</option>
+      <option value="twoSyllable">🔤 2 Suku Kata (Semua)</option>
+      <option value="common">Kata Dasar</option>
+      <option value="verbs">Kata Berimbuhan & Serapan</option>
+      <option value="fourSyllable">🔤 4 Suku Kata (Benda)</option>
+    </select>
+
+    <select id="fontSelect">
+      <option value="default">🔤 Font Default (Arial)</option>
+      <option value="bold">🔤 Font Tebal (Mudah Dibaca)</option>
+      <option value="handwriting">✍️ Font Tulisan Tangan</option>
+    </select>
+
+    <div class="buttons">
+      <button id="manualBtn" onclick="loadWord('manual')">Gunakan Kata Saya</button>
+      <button id="randomBtn" onclick="loadWord('random')">Ambil Kata Acak</button>
+    </div>
+
+    <button id="autoPlayBtn" onclick="playFullSequence()" disabled>▶ Putar Mengeja Lengkap</button>
+  </div>
+
+  <div class="instructions">Klik suku kata untuk dengar suara | Pilih font sesuai kebutuhan</div>
+
+  <div class="section">
+    <div class="section-title">Per Huruf</div>
+    <div class="items" id="letters"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Per Suku Kata</div>
+    <div class="items" id="syllables"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Kata Lengkap</div>
+    <div class="items">
+      <div class="item" id="fullWord" onclick="speak(this.textContent.toLowerCase())"></div>
+    </div>
+  </div>
+
+  <script>
+    let currentWord = '';
+    let currentSyllables = '';
+
+    document.getElementById('fontSelect').addEventListener('change', function() {
+      applyFont(this.value);
+    });
+
+    function applyFont(style) {
+      const elements = document.querySelectorAll('.item, #fullWord, .section-title, h1, .instructions');
+      elements.forEach(el => {
+        el.classList.remove('font-default', 'font-bold', 'font-handwriting');
+        el.classList.add(`font-${style}`);
+      });
+    }
+
+    // ─── DAFTAR LENGKAP OVERRIDE SESUAI PERMINTAAN ───
+    const OVERRIDE_SYLLABLES = {
+      // KATA DASAR 2 SUKU KATA
+      'meja': ['me', 'ja'],
+      'kuda': ['ku', 'da'],
+      'nasi': ['na', 'si'],
+      'buku': ['bu', 'ku'],
+      'roti': ['ro', 'ti'],
+      'makan': ['ma', 'kan'],
+      'gajah': ['ga', 'jah'],
+      'lumba': ['lum', 'ba'],
+      'rumah': ['ru', 'mah'],
+      'pintu': ['pin', 'tu'],
+      'ular': ['u', 'lar'],
+      'mangga': ['mang', 'ga'],
+      'lampu': ['lam', 'pu'],
+      'ikan': ['i', 'kan'],
+      'laut': ['la', 'ut'],
+      'gunting': ['gun', 'ting'],
+      'baik': ['ba', 'ik'],
+      'singa': ['si', 'nga'],
+      'tempe': ['tem', 'pe'],
+      'baut': ['ba', 'ut'],
+      'raib': ['ra', 'ib'],
+      'bunga': ['bu', 'nga'],
+      'bengawan': ['be', 'nga', 'wan'],
+      'berangin': ['ber', 'a', 'ngin'],
+      'sungai': ['su', 'nga', 'i'],
+      'danau': ['da', 'nau'],
+      'gunung': ['gu', 'nung'],
+      'geografi': ['geo', 'gra', 'fi'],
+      'pantai': ['pan', 'tai'],
+      'hutan': ['hu', 'tan'],
+      'sawah': ['sa', 'wah'],
+
+      // KATA BERIMBUHAN KOMPLEKS
+      'mengaji': ['me', 'nga', 'ji'],
+      'mengantuk': ['me', 'ngan', 'tuk'],
+      'menyembuhkan': ['me', 'nyem', 'buh', 'kan'],
+      'menyelamatkan': ['me', 'nye', 'la', 'mat', 'kan'],
+      'menyebabkan': ['me', 'nye', 'bab', 'kan'],
+      'beriringan': ['ber', 'i', 'ring', 'an'],
+      'berembuk': ['be', 'rem', 'buk'],
+      'bermain': ['ber', 'ma', 'in'],
+      'bersaing': ['ber', 'sa', 'ing'],
+      'berdaun': ['ber', 'da', 'un'],
+      'melaut': ['me', 'la', 'ut'],
+      'memberitahukan': ['mem', 'be', 'ri', 'ta', 'hu', 'kan'],
+      'mempermasalahkan': ['mem', 'per', 'ma', 'sa', 'lah', 'kan'],
+      'mempertanggungjawabkan': ['mem', 'per', 'tang', 'gung', 'ja', 'wab', 'kan'],
+      'mempekerjakan': ['mem', 'pe', 'ker', 'ja', 'kan'],
+      'memperalat': ['mem', 'per', 'a', 'lat'],
+      'mempersyaratkan': ['mem', 'per', 'sya', 'rat', 'kan'],
+      'mempermalukan': ['mem', 'per', 'ma', 'lu', 'kan'],
+      'membinasakan': ['mem', 'bi', 'na', 'sa', 'kan'],
+      'mempercantik': ['mem', 'per', 'can', 'tik'],
+      'memperdaya': ['mem', 'per', 'da', 'ya'],
+      'membudidayakan': ['mem', 'bu', 'di', 'da', 'ya', 'kan'],
+      'memperindah': ['mem', 'per', 'in', 'dah'],
+      'mempercepat': ['mem', 'per', 'ce', 'pat'],
+      'mengundang': ['meng', 'un', 'dang'],
+      'undangan': ['un', 'da', 'ngan'],
+      'memperkuat': ['mem', 'per', 'ku', 'at'],
+      'memperluas': ['mem', 'per', 'luas'],
+      'mengantar': ['meng', 'an', 'tar'],
+      'mengambil': ['meng', 'am', 'bil']
+    };
+
+    // ─── FUNGSI PEMISAH SUKU KATA ───
+    function syllabifyKBBI(word) {
+      if (!word || typeof word !== 'string') return [word];
+      const clean = word.toLowerCase().replace(/[^a-z]/g, '');
+      if (clean.length === 0) return [word];
+      if (clean.length <= 2) return [clean];
+
+      if (OVERRIDE_SYLLABLES[clean]) {
+        return OVERRIDE_SYLLABLES[clean];
+      }
+
+      const VOWELS = 'aiueo';
+      let prefix = '';
+      let stem = clean;
+
+      if (clean.startsWith('meng') && clean.length > 4) {
+        prefix = 'me';
+        stem = 'ng' + clean.slice(4);
+      } else if (clean.startsWith('mem') && clean.length > 3) {
+        prefix = 'me';
+        stem = 'm' + clean.slice(3);
+      } else if (clean.startsWith('meny') && clean.length > 4) {
+        prefix = 'me';
+        stem = 'ny' + clean.slice(4);
+      } else if (clean.startsWith('men') && clean.length > 3 && VOWELS.includes(clean[3])) {
+        prefix = 'me';
+        stem = 'n' + clean.slice(3);
+      }
+
+      function splitCore(w) {
+        if (w.length <= 3) return [w];
+        const result = [];
+        let i = 0;
+
+        while (i < w.length) {
+          let onset = '';
+          while (i < w.length && !VOWELS.includes(w[i])) {
+            onset += w[i];
+            i++;
+          }
+
+          let nucleus = '';
+          if (i < w.length && VOWELS.includes(w[i])) {
+            nucleus = w[i];
+            i++;
+            if (i < w.length) {
+              const next = w[i];
+              if ((nucleus === 'a' && (next === 'i' || next === 'u')) ||
+                  (nucleus === 'e' && next === 'i') ||
+                  (nucleus === 'o' && next === 'i')) {
+                nucleus += next;
+                i++;
+              }
+            }
+          } else {
+            if (result.length > 0) result[result.length - 1] += onset;
+            else result.push(onset);
+            break;
+          }
+
+          let coda = '';
+          if (i < w.length && !VOWELS.includes(w[i])) {
+            if (i + 1 < w.length && VOWELS.includes(w[i + 1])) {
+              // Jangan ambil — untuk suku berikutnya
+            } else {
+              coda += w[i];
+              i++;
+              if (i < w.length && !VOWELS.includes(w[i])) {
+                const possible = coda + w[i];
+                if (['ng', 'ks', 'nt', 'mp', 'nk'].includes(possible)) {
+                  coda = possible;
+                  i++;
+                }
+              }
+            }
+          }
+
+          result.push(onset + nucleus + coda);
+        }
+
+        return result.filter(s => s.length > 0);
+      }
+
+      if (prefix && stem) {
+        return [prefix, ...splitCore(stem)];
+      } else {
+        return splitCore(clean);
+      }
+    }
+
+    // ─── DATA KATA ACAK ───
+    const twoSyllable4to5 = [
+      "meja", "buku", "kuda", "roti", "nasi", "pagar", "laut", "ular",
+      "gula", "garam", "susu", "air", "api", "ibu", "ayah", "adik",
+      "kakak", "mata", "tali", "jari", "kaki", "tahu", "raja", "waktu",
+      "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan",
+      "sembilan", "puluh", "pintu", "kursi", "meja", "bantal", "selimut",
+      "cermin", "sisir", "sabun", "sampo", "kunci", "uang", "kertas",
+      "pensil", "penghapus", "gunting", "sendok", "garpu", "piring",
+      "gelas", "mobil", "motor", "sepeda", "kapal", "pesawat", "radio",
+      "lampu", "kasur", "topi", "sepatu", "tas", "pohon", "bunga", "awan",
+      "bulan", "ikan", "ayam", "bebek", "kambing", "sapi", "kucing",
+      "anjing", "burung", "elang", "monyet", "gajah", "harimau", "singa",
+      "rusa", "kelinci", "tikus", "paus", "hiu", "lumba", "jeruk", "apel",
+      "pisang", "mangga", "nangka", "durian", "salak", "manggis"
+    ];
+
+    const wordBank = {
+      twoSyllable4: twoSyllable4to5,
+      twoSyllable: [
+        "meja", "kursi", "pintu", "jendela", "buku", "tas", "topi", "sepatu",
+        "gelas", "piring", "sendok", "garpu", "mobil", "motor", "sepeda", "kapal",
+        "pesawat", "radio", "lampu", "kasur", "bantal", "selimut", "cermin", "sisir",
+        "sabun", "sampo", "kunci", "uang", "kertas", "pensil", "penghapus", "gunting",
+        "kuda", "sapi", "kambing", "ayam", "bebek", "angsa", "ular", "ikan",
+        "lumba", "paus", "hiu", "monyet", "beruang", "harimau", "singa", "gajah",
+        "rusa", "kelinci", "tikus", "kucing", "anjing", "burung", "elang", "nasi",
+        "roti", "susu", "kopi", "teh", "air", "gula", "garam", "telur", "daging",
+        "sayur", "buah", "pisang", "apel", "jeruk", "mangga", "makan", "minum",
+        "tidur", "bangun", "jalan", "lari", "main", "belajar", "baik", "jahat",
+        "besar", "kecil", "tinggi", "rendah", "panas", "dingin", "cepat", "lambat",
+        "indah", "jelek", "senang", "sedih", "marah", "tenang", "rumah", "pohon",
+        "bunga", "awan"
+      ],
+      common: ["roti", "nasi", "meja", "buku", "laut", "mangga", "lampu", "ikan", "gunting", "baik", "singa", "tempe", "baut", "raib", "bunga", "bengawan", "sungai", "danau", "gunung", "pantai", "hutan", "sawah"],
+      verbs: [
+        "mengaji", "mengantuk", "menyembuhkan", "menyelamatkan", "menyebabkan",
+        "beriringan", "berembuk", "bermain", "bersaing", "berdaun", "melaut",
+        "memberitahukan", "mempermasalahkan", "mempertanggungjawabkan",
+        "mempekerjakan", "memperalat", "mempersyaratkan", "mempermalukan",
+        "membinasakan", "mempercantik", "memperdaya", "membudidayakan",
+        "memperindah", "mempercepat", "mengundang", "undangan", "memperkuat",
+        "memperluas", "mengantar", "mengambil", "geografi", "edukatif", "interaktif"
+      ],
+      fourSyllable: ["televisi", "elektronik", "peralatan", "perabotan", "kendaraan"]
+    };
+
+    function getRandomItem(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    // ─── FUNGSI SUARA ───
+    function speak(text) {
+      if ('speechSynthesis' in window) {
+        speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'id-ID';
+        utterance.rate = 0.9;
+        speechSynthesis.speak(utterance);
+      }
+    }
+
+    // ─── TAMPILKAN KATA ───
+    function updateDisplay(word, syllables) {
+      currentWord = word.toLowerCase();
+      currentSyllables = syllables;
+      const fullWordEl = document.getElementById('fullWord');
+      fullWordEl.textContent = word.toUpperCase();
+
+      const currentFont = document.getElementById('fontSelect').value;
+      fullWordEl.className = 'item font-' + currentFont;
+
+      const lettersDiv = document.getElementById('letters');
+      lettersDiv.innerHTML = '';
+      for (let char of word) {
+        const el = document.createElement('div');
+        el.className = 'item font-' + currentFont;
+        el.textContent = char.toUpperCase();
+        el.onclick = () => speak(char);
+        lettersDiv.appendChild(el);
+      }
+
+      const syllablesDiv = document.getElementById('syllables');
+      syllablesDiv.innerHTML = '';
+      syllables.forEach(syl => {
+        const el = document.createElement('div');
+        el.className = 'item font-' + currentFont;
+        el.textContent = syl.toUpperCase();
+        el.onclick = () => {
+          for (let i = 0; i < syl.length; i++) {
+            setTimeout(() => speak(syl[i]), i * 600);
+          }
+          setTimeout(() => speak(syl), syl.length * 600);
+        };
+        syllablesDiv.appendChild(el);
+      });
+
+      document.getElementById('autoPlayBtn').disabled = false;
+    }
+
+    function loadWord(mode) {
+      let word = '', syllables = [];
+
+      if (mode === 'manual') {
+        word = document.getElementById('wordInput').value.trim().toLowerCase();
+        if (!word) { alert("Masukkan katanya!"); return; }
+        word = word.replace(/[^a-z]/g, '');
+        if (word.length < 2) { alert("Minimal 2 huruf!"); return; }
+        syllables = syllabifyKBBI(word);
+      } else {
+        const cat = document.getElementById('categorySelect').value;
+        const list = wordBank[cat] || wordBank.twoSyllable4;
+        word = getRandomItem(list);
+        syllables = syllabifyKBBI(word);
+      }
+
+      updateDisplay(word, syllables);
+      speak(word);
+    }
+
+    async function playFullSequence() {
+      if (!currentWord || !currentSyllables.length) return;
+      const delay = ms => new Promise(res => setTimeout(res, ms));
+      for (const syl of currentSyllables) {
+        for (let i = 0; i < syl.length; i++) {
+          speak(syl[i]); await delay(600);
+        }
+        speak(syl); await delay(800);
+      }
+      speak(currentWord);
+    }
+
+    document.getElementById('wordInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') loadWord('manual');
+    });
+
+    // Set default category
+    document.getElementById('categorySelect').value = 'twoSyllable4';
+  </script>
+
+</body>
+</html>
